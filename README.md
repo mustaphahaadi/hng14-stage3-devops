@@ -442,15 +442,9 @@ This project is created for HNG Internship Stage 3 DevOps Challenge.
 
 ---
 
-## Author
-
-Built by: [Your Name]  
-GitHub: [Your GitHub Profile]  
-Created: January 2024
-
 ---
 
 **Server Status**: 🟢 Live  
-**Dashboard**: [Your server IP]:8000  
+**Dashboard**: [IP: To be added later]:8000  
 **Metrics Updated**: Every 3 seconds  
 **Audit Log**: `/var/log/hng-detector/audit.log`
