@@ -1,0 +1,111 @@
+version: '3.9'
+
+services:
+  # Nginx reverse proxy with JSON logging
+  nginx:
+    image: nginx:alpine
+    container_name: hng-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - HNG-nginx-logs:/var/log/nginx
+      - ./certs:/etc/nginx/certs:ro  # For HTTPS (if needed)
+    networks:
+      - hng-network
+    depends_on:
+      - nextcloud
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nextcloud application (pre-built image, not modified)
+  nextcloud:
+    image: kefaslungu/hng-nextcloud:latest
+    container_name: hng-nextcloud
+    environment:
+      NEXTCLOUD_ADMIN_USER: admin
+      NEXTCLOUD_ADMIN_PASSWORD: nextcloud_admin_password_123
+      NEXTCLOUD_TRUSTED_DOMAINS: localhost 127.0.0.1
+      OVERWRITE_PROTOCOL: http
+      OVERWRITE_HOST: localhost
+      OVERWRITE_WEBROOT: /
+      OVERWRITE_CLI_URL: http://localhost
+      ALLOW_EMPTY_PASSWORD: "true"
+    volumes:
+      - nextcloud_data:/var/www/html
+      - HNG-nginx-logs:/var/log/nginx:ro  # Read nginx logs
+    networks:
+      - hng-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MariaDB database for Nextcloud
+  mariadb:
+    image: mariadb:latest
+    container_name: hng-mariadb
+    environment:
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: nextcloud_db_password_123
+      MYSQL_ROOT_PASSWORD: root_password_123
+    volumes:
+      - nextcloud_db:/var/lib/mysql
+    networks:
+      - hng-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Anomaly Detection Engine daemon
+  detector:
+    build:
+      context: ./detector
+      dockerfile: Dockerfile
+    container_name: hng-detector
+    environment:
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+      CONFIG_PATH: /app/config.yaml
+      LOG_LEVEL: INFO
+    volumes:
+      - HNG-nginx-logs:/var/log/nginx:ro  # Read-only access to nginx logs
+      - ./detector/config.yaml:/app/config.yaml:ro
+      - detector_logs:/var/log/hng-detector
+    ports:
+      - "8000:8000"  # Dashboard web UI
+    networks:
+      - hng-network
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    privileged: true  # Required for iptables access
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  hng-network:
+    driver: bridge
+
+volumes:
+  nextcloud_data:
+    driver: local
+  nextcloud_db:
+    driver: local
+  HNG-nginx-logs:
+    driver: local
+  detector_logs:
+    driver: local
