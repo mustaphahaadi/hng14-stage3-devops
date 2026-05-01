@@ -1,0 +1,49 @@
+---
+# Anomaly Detection Engine Configuration
+
+# Slack Webhook URL for alerts
+slack:
+  webhook_url: "${SLACK_WEBHOOK_URL}"  # Set via environment variable
+  timeout: 10
+
+# Detection thresholds
+detection:
+  z_score_threshold: 3.0           # Standard deviations from mean
+  rate_multiplier: 5.0             # 5x baseline mean triggers alert
+  error_rate_multiplier: 3.0       # 3x baseline error rate tightens thresholds
+  global_anomaly_multiplier: 5.0   # Global rate multiplier threshold
+
+# Sliding window configuration (seconds)
+windows:
+  short_window: 60                 # Per-IP and global request rate window
+  baseline_window: 1800            # 30 minutes for rolling baseline (per hour slot)
+  baseline_recalc_interval: 60     # Recalculate baseline every 60 seconds
+
+# Ban/unban backoff schedule (minutes)
+unbanner:
+  schedule:
+    - 10
+    - 30
+    - 120
+  permanent_after: 720             # Ban permanently after 12 hours
+
+# Nginx log configuration
+nginx:
+  log_path: "/var/log/nginx/hng-access.log"
+  json_format: true                # Expect JSON-formatted logs
+
+# Dashboard configuration
+dashboard:
+  port: 8000
+  host: "0.0.0.0"
+  refresh_interval: 3              # Seconds
+
+# Audit logging
+audit:
+  log_file: "/var/log/hng-detector/audit.log"
+  log_format: "[{timestamp}] {action} IP:{ip} | {condition} | rate:{rate} | baseline:{baseline} | duration:{duration}"
+
+# Logging level
+logging:
+  level: "INFO"                    # DEBUG, INFO, WARNING, ERROR
+  console_output: true
